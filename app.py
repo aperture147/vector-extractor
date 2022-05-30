@@ -23,5 +23,5 @@ with open("test.ai", "rb") as f:
 
 inkscape_actions_str = ";".join(inkscape_actions)
 
-proc = Popen(shlex.split(f'inkscape --actions="{inkscape_actions_str}" --pdf-poppler'), stdout=DEVNULL)
+proc = Popen(shlex.split(f'{INKSCAPE_PATH} --actions="{inkscape_actions_str}" --pdf-poppler'), stdout=DEVNULL)
 proc.wait()
