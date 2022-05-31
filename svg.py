@@ -6,31 +6,49 @@ SVG_NAMESPACE = "http://www.w3.org/2000/svg"
 NSMAP = {None: SVG_NAMESPACE}
 
 def extract_elements(file_path):
+
     tree = etree.parse(file_path, parser=etree.XMLParser())
     root = tree.getroot()
+    
     parent_dir, _ = os.path.splitext(file_path)
-    part_dir = f"{parent_dir}/part"
+    part_dir = f"{parent_dir}/"
     os.makedirs(part_dir, exist_ok=True)
-    new_root = etree.Element("svg", attrib=root.attrib, nsmap=NSMAP)
-    def node_travel(node, new_node, group_node):
-        for child in node:
-            if child.tag.endswith("{http://www.w3.org/2000/svg}g"):
-                new_group_node = etree.Element('g', attrib=child.attrib)
-                group_node.append(new_group_node)
-                node_travel(child, new_node, new_group_node)
-                group_node.remove(new_group_node)
+    text_root = etree.Element("svg", attrib=root.attrib, nsmap=NSMAP)
+    shape_root = etree.Element("svg", attrib=root.attrib, nsmap=NSMAP)
+    def node_travel(original_node, text_node, shape_node):
+        child_shape_node_list = []
+        for child_node in original_node:
+            if child_node.tag.endswith("{http://www.w3.org/2000/svg}g"):
+                new_text_node = etree.Element('g', attrib=child_node.attrib)
+                new_shape_node = etree.Element('g', attrib=child_node.attrib)
+                text_node.append(new_text_node)
+                shape_node.append(new_shape_node)
+                node_travel(child_node, new_text_node, new_shape_node)
+                shape_node.remove(new_shape_node)
+            elif child_node.tag.endswith("{http://www.w3.org/2000/svg}text"):
+                text_node.append(child_node)
+            elif child_node.tag.endswith("{http://www.w3.org/2000/svg}defs"):
+                shape_node.append(child_node)
             else:
-                if not child.tag.endswith("{http://www.w3.org/2000/svg}defs"):
-                    group_node.append(child)
-                    part_file_path = f"{part_dir}/{time()}.svg"
-                    with open(part_file_path, 'wb') as f:
-                        f.write(etree.tostring(
-                            etree.ElementTree(new_root),
-                            xml_declaration=True,
-                            encoding='utf-8',
-                            standalone=False,
-                        ))
-                    group_node.remove(child)
-                else:
-                    new_node.append(child)
-    node_travel(root, new_root, new_root)
+                child_shape_node_list.append(child_node)
+        if child_shape_node_list:
+            for child_shape_node in child_shape_node_list:
+                shape_node.append(child_shape_node)
+            part_file_path = f"{part_dir}/{time()}.svg"
+            with open(part_file_path, 'wb') as f:
+                f.write(etree.tostring(
+                    etree.ElementTree(shape_root),
+                    xml_declaration=True,
+                    encoding='utf-8',
+                    standalone=False,
+                ))
+    node_travel(root, text_root, shape_root)
+
+    part_file_path = f"{part_dir}/{time()}.svg"
+    with open(part_file_path, 'wb') as f:
+        f.write(etree.tostring(
+            etree.ElementTree(text_root),
+            xml_declaration=True,
+            encoding='utf-8',
+            standalone=False,
+        ))
