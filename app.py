@@ -34,7 +34,7 @@ with open("test.ai", "rb") as f:
         ))
 
 inkscape_actions_str = ";".join(inkscape_actions)
-with open(f"log/{current_ts}.out.txt", "wb") as f_out, open(f"log/{current_ts}.err.txt", "wb") as f_err: 
+with open(f"inkscape_log/{current_ts}.out.txt", "wb") as f_out, open(f"inkscape_log/{current_ts}.err.txt", "wb") as f_err: 
     proc = Popen(shlex.split(f'{INKSCAPE_PATH} --actions="{inkscape_actions_str}"'), stdout=f_out, stderr=f_err)
     proc.wait()
 for file_path in target_file_list:
