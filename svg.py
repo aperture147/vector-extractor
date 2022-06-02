@@ -1,28 +1,37 @@
 import json
 import os
+from lxml.etree import Element, XMLParser
 from lxml import etree
-from time import time
-from transformation import get_transformation_matrix, make_coordinate_vector, IDENTITY_MATRIX
+from transformation import get_transformation_matrix, calculate_node_coodination, IDENTITY_MATRIX
 import numpy as np
 
 SVG_NAMESPACE = "http://www.w3.org/2000/svg"
-NSMAP = {None: SVG_NAMESPACE}
+
+SVG_NSMAP = {None: SVG_NAMESPACE}
+
+SVG_GROUP_TAG = f"{{{SVG_NAMESPACE}}}g"
+SVG_DEFS_TAG = f"{{{SVG_NAMESPACE}}}defs"
+SVG_TEXT_TAG = f"{{{SVG_NAMESPACE}}}text"
 
 def extract_elements(file_path):
-
-    tree = etree.parse(file_path, parser=etree.XMLParser())
+    tree = etree.parse(file_path, parser=XMLParser())
     root = tree.getroot()
-    
-    parent_dir, _ = os.path.splitext(file_path)
-    part_dir = f"{parent_dir}/"
-    os.makedirs(part_dir, exist_ok=True)
 
-    text_root = etree.Element("svg", attrib=root.attrib, nsmap=NSMAP)
-    shape_root = etree.Element("svg", attrib=root.attrib, nsmap=NSMAP)
+    part_path, _ = os.path.splitext(file_path)
+    os.makedirs(part_path)
+
     element_locations = {}
+    
+    text_root  = Element("svg", attrib=root.attrib, nsmap=SVG_NSMAP)
+    shape_root = Element("svg", attrib=root.attrib, nsmap=SVG_NSMAP)
 
-    def node_travel(original_node, text_node, shape_node, trans_matrix):
+    def _node_travel(
+            original_node: Element,
+            text_node: Element,
+            shape_node: Element,
+            trans_matrix: np.ndarray):
         child_shape_node_list = []
+
         for child_node in original_node:
             if 'transform' in child_node.attrib:
                 child_trans_matrix = get_transformation_matrix(child_node.get('transform'))
@@ -30,47 +39,46 @@ def extract_elements(file_path):
                 ctw = np.matmul(trans_matrix, child_trans_matrix)
             else:
                 ctw = trans_matrix
-            if child_node.tag.endswith("{http://www.w3.org/2000/svg}g"):
-                new_text_node = etree.Element('g', attrib=child_node.attrib)
-                new_shape_node = etree.Element('g', attrib=child_node.attrib)
+            if child_node.tag.endswith(SVG_GROUP_TAG):
+                new_text_node  = Element('g', attrib=child_node.attrib)
+                new_shape_node = Element('g', attrib=child_node.attrib)
                 text_node.append(new_text_node)
                 shape_node.append(new_shape_node)
-                node_travel(child_node, new_text_node, new_shape_node, ctw)
+                _node_travel(child_node, new_text_node, new_shape_node, ctw)
                 shape_node.remove(new_shape_node)
-            elif child_node.tag.endswith("{http://www.w3.org/2000/svg}defs"):
+            elif child_node.tag.endswith(SVG_DEFS_TAG):
                 shape_node.append(child_node)
             else:
-                child_node_coord_vector = make_coordinate_vector(child_node)
-                trans_child_node_coord_vector = np.dot(ctw, child_node_coord_vector)
+                x, y = calculate_node_coodination(child_node, ctw)
 
                 element_locations[child_node.get('id')] = {
-                    'x': trans_child_node_coord_vector[0],
-                    'y': trans_child_node_coord_vector[1]
+                    'x': x,
+                    'y': y
                 }
-                if child_node.tag.endswith("{http://www.w3.org/2000/svg}text"):
+
+                if child_node.tag.endswith(SVG_TEXT_TAG):
                     text_node.append(child_node)
                 else:
                     child_shape_node_list.append(child_node)
         if child_shape_node_list:
             for child_shape_node in child_shape_node_list:
                 shape_node.append(child_shape_node)
-            part_file_path = f"{part_dir}/{time()}.svg"
-            with open(part_file_path, 'wb') as f:
+            with open(f"{part_path}/{shape_node.get('id')}.svg", 'wb') as f:
                 f.write(etree.tostring(
-                    etree.ElementTree(shape_root),
+                    shape_root,
                     xml_declaration=True,
                     encoding='utf-8',
                     standalone=False,
                 ))
-    node_travel(root, text_root, shape_root, IDENTITY_MATRIX)
+    
+    _node_travel(root, text_root, shape_root, IDENTITY_MATRIX)
 
-    part_file_path = f"{part_dir}/{time()}.svg"
-    with open(part_file_path, 'wb') as f:
+    with open(f"{part_path}/text.svg", 'wb') as f:
         f.write(etree.tostring(
-            etree.ElementTree(text_root),
+            text_root,
             xml_declaration=True,
             encoding='utf-8',
             standalone=False,
         ))
-    with open(part_file_path + '.json', 'w') as f:
+    with open(f'{part_path}/location.json', 'w') as f:
         json.dump(element_locations, f)

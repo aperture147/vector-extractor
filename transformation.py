@@ -1,3 +1,4 @@
+from typing import Tuple
 import numpy as np
 
 SVG_NAMESPACE = "http://www.w3.org/2000/svg"
@@ -11,11 +12,19 @@ SVG_FUNC_ROTATE = 'rotate'
 SVG_FUNC_SKEWX = 'skewx'
 SVG_FUNC_SKEWY = 'skewy'
 
-def make_coordinate_vector(svg_node):
-    x = float(svg_node.get('x')) if 'x' in svg_node.attrib else 0.0
-    y = float(svg_node.get('y')) if 'y' in svg_node.attrib else 0.0
+SVG_X_ATTR = 'x'
+SVG_Y_ATTR = 'y'
 
-    return np.array([x, y, 1], dtype=float)
+def ctw_to_svg_matrix_transform(ctw: np.ndarray) -> str:
+    a, c, e = ctw[0]
+    b, d, f = ctw[1]
+    return f'matrix({a},{b},{c},{d},{e},{f})'
+
+def calculate_node_coodination(node, ctw: np.ndarray) -> Tuple[float, float]:
+    x = float(node.get(SVG_X_ATTR)) if SVG_X_ATTR in node.attrib else 0
+    y = float(node.get(SVG_Y_ATTR)) if SVG_Y_ATTR in node.attrib else 0
+    coord_vector = np.dot(ctw, np.array([x, y, 1], dtype=float))
+    return (coord_vector[0], coord_vector[1])
 
 def svg_matrix_transform(transform_attr):
     # matrix(1,0,0,-0.99998571,28.0033,17.5688)
@@ -120,7 +129,7 @@ def svg_skewy_transform(transform_attr):
         [               0, 0, 1]
     ], dtype=float)
 
-def get_transformation_matrix(svg_transform_attrs: str):
+def get_transformation_matrix(svg_transform_attrs: str) -> np.ndarray:
     transforms = svg_transform_attrs.split(' ')
     result_matrix = IDENTITY_MATRIX
     for transform_func in transforms:
