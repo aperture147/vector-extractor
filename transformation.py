@@ -11,6 +11,12 @@ SVG_FUNC_ROTATE = 'rotate'
 SVG_FUNC_SKEWX = 'skewx'
 SVG_FUNC_SKEWY = 'skewy'
 
+def make_coordinate_vector(svg_node):
+    x = float(svg_node.get('x')) if 'x' in svg_node.attrib else 0.0
+    y = float(svg_node.get('y')) if 'y' in svg_node.attrib else 0.0
+
+    return np.array([x, y, 1], dtype=float)
+
 def svg_matrix_transform(transform_attr):
     # matrix(1,0,0,-0.99998571,28.0033,17.5688)
     # slice [7:-1] => 1,0,0,-0.99998571,28.0033,17.5688

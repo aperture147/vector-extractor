@@ -2,7 +2,7 @@ import json
 import os
 from lxml import etree
 from time import time
-from transformation import get_transformation_matrix, IDENTITY_MATRIX
+from transformation import get_transformation_matrix, make_coordinate_vector, IDENTITY_MATRIX
 import numpy as np
 
 SVG_NAMESPACE = "http://www.w3.org/2000/svg"
@@ -26,32 +26,31 @@ def extract_elements(file_path):
         for child_node in original_node:
             if 'transform' in child_node.attrib:
                 child_trans_matrix = get_transformation_matrix(child_node.get('transform'))
-                new_trans_matrix = np.matmul(trans_matrix, child_trans_matrix)
+                # current transformation matrix 
+                ctw = np.matmul(trans_matrix, child_trans_matrix)
             else:
-                new_trans_matrix = trans_matrix
+                ctw = trans_matrix
             if child_node.tag.endswith("{http://www.w3.org/2000/svg}g"):
                 new_text_node = etree.Element('g', attrib=child_node.attrib)
                 new_shape_node = etree.Element('g', attrib=child_node.attrib)
                 text_node.append(new_text_node)
                 shape_node.append(new_shape_node)
-                node_travel(child_node, new_text_node, new_shape_node, new_trans_matrix)
+                node_travel(child_node, new_text_node, new_shape_node, ctw)
                 shape_node.remove(new_shape_node)
-            elif child_node.tag.endswith("{http://www.w3.org/2000/svg}text"):
-                child_node_x = child_node.get('x') if 'x' in child_node.attrib else 0
-                child_node_y = child_node.get('y') if 'y' in child_node.attrib else 0
-
-                child_node_coord_vector = np.array([child_node_x, child_node_y, 1], dtype=float)
-                trans_child_node_coord_vector = np.dot(new_trans_matrix, child_node_coord_vector)
+            elif child_node.tag.endswith("{http://www.w3.org/2000/svg}defs"):
+                shape_node.append(child_node)
+            else:
+                child_node_coord_vector = make_coordinate_vector(child_node)
+                trans_child_node_coord_vector = np.dot(ctw, child_node_coord_vector)
 
                 element_locations[child_node.get('id')] = {
                     'x': trans_child_node_coord_vector[0],
                     'y': trans_child_node_coord_vector[1]
                 }
-                text_node.append(child_node)
-            elif child_node.tag.endswith("{http://www.w3.org/2000/svg}defs"):
-                shape_node.append(child_node)
-            else:
-                child_shape_node_list.append(child_node)
+                if child_node.tag.endswith("{http://www.w3.org/2000/svg}text"):
+                    text_node.append(child_node)
+                else:
+                    child_shape_node_list.append(child_node)
         if child_shape_node_list:
             for child_shape_node in child_shape_node_list:
                 shape_node.append(child_shape_node)
