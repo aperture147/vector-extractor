@@ -6,5 +6,5 @@ Install:
     - Inkscape
     - All libraries in `requirements.txt`
 
-Run:
+Run test:
 `python3 app.py`# vector-extractor

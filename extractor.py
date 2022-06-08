@@ -13,7 +13,11 @@ INKSCAPE_PATH = "inkscape" # change this to your absolute inkscape path or link 
 INKSCAPE_EXPORT_ACTIONS = "file-open:tmp/{current_ts}/{i}.ai;vacuum-defs;export-plain-svg;export-filename:result/{current_ts}/{i}.svg;export-do;file-close"
 RESULT_FILE_PATH = "result/{current_ts}/{i}.svg"
 
-def extract(file_path: str, inkscape_log: bool = False, cleanup: bool = True) -> str:
+def extract(
+    file_path: str,
+    inkscape_log: bool = False,
+    artboard_only: bool = False,
+    cleanup: bool = True) -> str:
     inkscape_actions = []
     target_file_list = []
     extraction_id = str(uuid4())
@@ -49,14 +53,14 @@ def extract(file_path: str, inkscape_log: bool = False, cleanup: bool = True) ->
         else:
             proc = Popen(shlex.split(f'{INKSCAPE_PATH} --actions="{inkscape_actions_str}"'), stdout=DEVNULL, stderr=DEVNULL)
         proc.wait()
+        if not artboard_only:
+            with ThreadPool(os.cpu_count()) as pool:
+                pool.starmap(svg.extract_elements, [(file_path,) for file_path in target_file_list])
 
-        with ThreadPool(os.cpu_count()) as pool:
-            pool.starmap(svg.extract_elements, [(file_path,) for file_path in target_file_list])
-
-        if cleanup:
-            for file_path in target_file_list:
-                os.remove(file_path)
-            shutil.rmtree(f'tmp/{extraction_id}')
+            if cleanup:
+                for file_path in target_file_list:
+                    os.remove(file_path)
+                shutil.rmtree(f'tmp/{extraction_id}')
         return extraction_id
     except Exception as e:
         if cleanup:
