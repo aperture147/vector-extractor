@@ -1,10 +1,10 @@
 Vector Extractor
 ================
 
-Install:
-    - Python3
-    - Inkscape
-    - All libraries in `requirements.txt`
+Prepare:
+    - Install Python 3/PIP
+    - Install Inkscape (download in this [link](https://inkscape.org/release))
+    - Run `pip install -r requirements.txt`
 
-Run test:
-`python3 app.py`# vector-extractor
+How to use:
+Type `python ./app.py --help` to show help
