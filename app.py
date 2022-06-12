@@ -5,6 +5,9 @@ from extractor import Extractor
 
 parser = ArgumentParser()
 
+parser.add_argument("-f", "--file",
+                    required=True,
+                    help="File path")
 parser.add_argument("-a", "--artboard-only", 
                     default=False,
                     action="store_true",
@@ -26,7 +29,7 @@ args = parser.parse_args()
 extractor = Extractor(inkscape_path=args.inkscape_path)
 
 extraction_id = extractor.extract(
-    'test.pdf',
+    args.file,
     inkscape_log=args.log,
     artboard_only=args.artboard_only,
     cleanup=not args.no_cleanup)
