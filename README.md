@@ -1,6 +1,10 @@
 Vector Extractor
 ================
 
+A Python script which extracts vector graphics from Adobe Illustrator into multiple smaller SVG files, exploiting the fact that an `.ai` file is actually a PDF-XML file in disguise. To maintain the position and transformation of the vector graphics, basic linear algebra has been used (actually I only use matrix multiplication).
+
+> The XML node traversing code is an inefficient recursive piece of trash, which should be implemented using dynamic programming in the first place.
+
 # Prepare:
 
    - Install Python 3 (tested on Python 3.8)
